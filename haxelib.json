@@ -1,0 +1,11 @@
+{
+  "name": "bio",
+  "license": "MIT",
+  "classPath": "src/",
+  "tags": ["cross", "utility"],
+  "description": "Utility library featuring various helper functions for string manipulation, command line interface, etc.",
+  "contributors": ["bioruebe"],
+  "releasenote": "Initial release",
+  "version": "1.0.0",
+  "url": "https://github.com/bioruebe/Bio.hx"
+}
