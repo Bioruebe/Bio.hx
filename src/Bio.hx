@@ -48,6 +48,23 @@ class Bio
 	}
 	
 	/**
+	 * Replace between two strings.
+	 * @param	string	the search string
+	 * @param	start	the start string to replace between
+	 * @param	end		the end string to replace between
+	 * @param	replace the replacement string
+	 */
+	public static function StringReplaceBetween(string:String, start:String, end:String, replace:String) {
+		var startPos:Int = string.indexOf(start);
+		var endPos = string.indexOf(end, startPos + 1);
+		
+		if (startPos == -1 || endPos == -1) return string;
+		
+		startPos += start.length;
+		return string.substring(0, startPos) + replace + string.substring(endPos);
+	}
+	
+	/**
 	 * Return all strings between given start and end string.
 	 * @param	string	the search string
 	 * @param	start	the start string to search between
@@ -100,6 +117,33 @@ class Bio
 		else {
 			return string.substr(0, pos) + insertString + string.substr(pos);
 		}
+	}
+	
+	/**
+	 * Replace placeholders in a template with the specified values
+	 * @param	template		The template string
+	 * @param	placeholders	A map containing the placeholder names and values
+	 */
+	public static function tpl(template:String, placeholders:Map<String, Dynamic>) {
+		for (key in placeholders.keys()) {
+			template = StringTools.replace(template, key, placeholders.get(key));
+		}
+		
+		return template;
+	}
+	
+	/**
+	 * Combine two maps.
+	 * @param	m1			The first map
+	 * @param	m2			The second map
+	 * @param	overwrite	If true, keys from m2 replace keys from m1
+	 */
+	public static function CombineMaps<T>(m1:StringMap<T>, m2:StringMap<T>, overwrite:Bool = false) {
+		if (m2 == null) return m1;
+		for (item in m2.keys()) {
+			if (!m1.exists(item) || overwrite) m1.set(item, m2.get(item));
+		}
+		return m1;
 	}
 	
 	/**
@@ -265,6 +309,7 @@ enum LogSeverity {
 	ERROR;
 	CRITICAL;
 	MESSAGE;
+	UNITTEST;
 }
 
 enum PromptSetting {
