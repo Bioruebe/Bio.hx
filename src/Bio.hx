@@ -22,9 +22,8 @@ import haxe.macro.Context;
  * Bioruebe's helper class containing various functions to be used across different projects.
  * @author Bioruebe
  */
-class Bio
-{
-	private static inline var seperator = "\r\n---------------------------------------------------------------------\r\n";
+class Bio {
+	public static inline var seperator = "\r\n---------------------------------------------------------------------\r\n";
 	private static var promptSettings = new StringMap<PromptSetting>();
 	
 	/**
@@ -145,6 +144,41 @@ class Bio
 		}
 		return m1;
 	}
+
+	/** Return seperate parts of a file path
+	 * @param	path		The full file path
+	 * @return				A FileParts object
+	 */
+	public static function FileGetParts(path:String):FileParts{
+		if (!StringInStr(path, ".")) return {name: "", fullName: "", extension: "", directory: PathAppendSeperator(path)};
+
+		var pos = path.lastIndexOf("\\");
+		if (pos < 0) pos = path.lastIndexOf("/");
+		if (pos < 0) return null;
+		
+		var directory = path.substring(0, pos + 1);
+		var fullname = path.substring(pos + 1);
+		pos = fullname.lastIndexOf(".");
+		
+		var extension = fullname.substring(pos + 1);
+		return {name: fullname.substring(0, pos), fullName: fullname, extension: extension, directory: directory};
+	}
+	
+	/**
+	 * Return true if the path ends with '/' or '\'
+	 * @param	path
+	 */
+	public static inline function PathEndsWithSeperator(path:String){
+		return StringTools.endsWith(path, "/") || StringTools.endsWith(path, "\\");
+	}
+	
+	/**
+	 * Append '/' to the path if it doesn't end with a seperator character
+	 * @param	path
+	 */
+	public static inline function PathAppendSeperator(path:String){
+		return PathEndsWithSeperator(path)? path: path + "/";
+	}
 	
 	/**
 	 * Write message to stdout/stderr
@@ -157,7 +191,7 @@ class Bio
 #end
 		
 		if (severity == null) severity = LogSeverity.INFO;
-		if (severity != LogSeverity.MESSAGE) msg = '[${severity}] ${msg}';
+		if (severity != LogSeverity.MESSAGE) msg = '[${severity}]\t${msg}';
 		
 		switch (severity) {
 			case LogSeverity.ERROR:
@@ -175,6 +209,17 @@ class Bio
 	}
 	
 	/**
+	 * Convenience function, shortcut to calling Cout with LogSeverity.ERROR
+	 * @param	msg			The message to print	
+	 */
+	public static function Error(msg:Dynamic, exitCode:Int = -1){
+		Cout(msg, LogSeverity.ERROR);
+#if sys		
+		if (exitCode > -1) Sys.exit(exitCode);
+#end
+	}
+	
+	/**
 	 * Prints an array along with its indices
 	 * @param	array	The array to print
 	 * @param	offset	Integer offset for indices, e.g. to start with index 1
@@ -188,6 +233,8 @@ class Bio
 	/**
 	 * Display a prompt and wait for user input
 	 * @param	msg		The question to display
+	 * @param	id		An unique id used for this prompt. This is used to save always/never preferences.
+	 * @param	choices	Choices text to be displayed
 	 * @param	chars	Characters used for positive and negative result, in format y|n
 	 * @return			User choice: true or false
 	 */
@@ -203,7 +250,7 @@ class Bio
 		var input:Int;
 		
 		while (true) {
-			Sys.println(msg + ' $choices');
+			Sys.println("\n" + msg + ' $choices');
 			input = String.fromCharCode(Sys.getChar(true)).toLowerCase().charCodeAt(0);
 			Sys.println("");
 			
@@ -300,6 +347,13 @@ class Bio
 		return Context.makeExpr(Date.now().getFullYear(), Context.currentPos());
 	}
 	
+}
+
+typedef FileParts = {
+	var name:String;
+	var fullName:String;
+	var extension:String;
+	var directory:String;
 }
 
 enum LogSeverity {
