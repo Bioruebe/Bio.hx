@@ -54,7 +54,7 @@ class Bio {
 	 * @param	replace the replacement string
 	 */
 	public static function StringReplaceBetween(string:String, start:String, end:String, replace:String) {
-		var startPos:Int = string.indexOf(start);
+		var startPos = start == ""? 0: string.indexOf(start);
 		var endPos = string.indexOf(end, startPos + 1);
 		
 		if (startPos == -1 || endPos == -1) return string;
@@ -150,6 +150,7 @@ class Bio {
 	 * @return				A FileParts object
 	 */
 	public static function FileGetParts(path:String):FileParts{
+		// TODO
 		if (!StringInStr(path, ".")) return {name: "", fullName: "", extension: "", directory: PathAppendSeperator(path)};
 
 		var pos = path.lastIndexOf("\\");
@@ -191,7 +192,7 @@ class Bio {
 #end
 		
 		if (severity == null) severity = LogSeverity.INFO;
-		if (severity != LogSeverity.MESSAGE) msg = '[${severity}]\t${msg}';
+		if (severity != LogSeverity.MESSAGE) msg = StringTools.rpad('[${severity}]', " ", 12) + msg;
 		
 		switch (severity) {
 			case LogSeverity.ERROR:
@@ -224,9 +225,9 @@ class Bio {
 	 * @param	array	The array to print
 	 * @param	offset	Integer offset for indices, e.g. to start with index 1
 	 */
-	public static function PrintArray(array:Array<Dynamic>, offset:Int = 1) {
+	public static function PrintArray(array:Array<Dynamic>, offset:Int = 1, ?field:String) {
 		for (i in 0...array.length) {
-			Sys.println('\t[${i + offset}] ' + array[i]);
+			Sys.println('\t[${i + offset}] ' + (field == null? array[i]: Reflect.field(array[i], field)));
 		}
 	}
 	
@@ -265,7 +266,6 @@ class Bio {
 				return false;
 			}
 		}
-		
 	}
 	
 	/**
@@ -274,17 +274,27 @@ class Bio {
 	 * @param	min	Minimum value to accept
 	 * @param	max	Maximum value to accept
 	 */
-	public static function IntPrompt(msg:String, min:Null<Int>, max:Null<Int>) {
-		Sys.println(msg);
-		var input = Std.parseInt(String.fromCharCode(Sys.getChar(true)));
+	public static function IntPrompt(?msg:String, min:Null<Int>, max:Null<Int>) {
+		if (msg != null) Sys.println(msg);
+		var input = null;
 		Sys.println("");
 		
+		var multiChar = max > 9 || min < -9;
 		while (input == null || (min != null && input < min) || (max != null && input > max)) {
-			input = Std.parseInt(String.fromCharCode(Sys.getChar(true)));
+			input = Std.parseInt(multiChar? Sys.stdin().readLine(): String.fromCharCode(Sys.getChar(true)));
 			Sys.println("");
 		}
 		
 		return input;
+	}
+	
+	/**
+	 * Wait for any key press
+	 * @param	msg		The message to display before waiting
+	 */
+	public static function ContinuePrompt(msg:String) {
+		Sys.println(msg);
+		Sys.getChar(false);
 	}
 	
 	/**
@@ -321,7 +331,7 @@ class Bio {
 	 */
 	public static function getProgramName():String {
 #if sys
-		var path:String = Sys.programPath();
+		var path:String = Sys.executablePath();
 		return path.substr(path.lastIndexOf("\\") + 1);
 #else
 		return "<executableName>";
@@ -350,9 +360,21 @@ class Bio {
 }
 
 typedef FileParts = {
+	/**
+	 * The file name without extension
+	 */
 	var name:String;
+	/**
+	 * The file name + extension
+	 */
 	var fullName:String;
+	/**
+	 * The file's extension
+	 */
 	var extension:String;
+	/**
+	 * The file extension
+	 */
 	var directory:String;
 }
 
