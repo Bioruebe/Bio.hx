@@ -17,6 +17,7 @@
 package ;
 import haxe.ds.StringMap;
 import haxe.macro.Context;
+import sys.FileSystem;
 
 /**
  * Bioruebe's helper class containing various functions to be used across different projects.
@@ -155,7 +156,10 @@ class Bio {
 
 		var pos = path.lastIndexOf("\\");
 		if (pos < 0) pos = path.lastIndexOf("/");
-		if (pos < 0) return null;
+		if (pos < 0) {
+			var split = path.split(".");
+			return {name: split[0], fullName: path, extension: split.length > 1? split[1]: "", directory: "./"};
+		}
 		
 		var directory = path.substring(0, pos + 1);
 		var fullname = path.substring(pos + 1);
@@ -177,8 +181,25 @@ class Bio {
 	 * Append '/' to the path if it doesn't end with a seperator character
 	 * @param	path
 	 */
-	public static inline function PathAppendSeperator(path:String){
+	public static inline function PathAppendSeperator(path:String):String {
 		return PathEndsWithSeperator(path)? path: path + "/";
+	}
+	
+	/**
+	 * Make sure directory structure exists
+	 * @param	path
+	 */
+	public static function AssurePathExists(path:String) {
+		var parts = path.split("/");
+		if (parts.length < 2) parts = path.split("\\");
+		var curr = "";
+		for (p in parts) {
+			curr += p + "/";
+			if (p.indexOf(":") > -1 || p.indexOf(".") > -1) continue;
+			if (!FileSystem.exists(curr)) FileSystem.createDirectory(curr);
+		}
+		
+		return path;
 	}
 	
 	/**
@@ -210,6 +231,14 @@ class Bio {
 	}
 	
 	/**
+	 * Convenience function, shortcut to calling Cout with LogSeverity.WARNING
+	 * @param	msg			The message to print	
+	 */
+	public static inline function Warning(msg:Dynamic){
+		Cout(msg, LogSeverity.WARNING);
+	}
+	
+	/**
 	 * Convenience function, shortcut to calling Cout with LogSeverity.ERROR
 	 * @param	msg			The message to print	
 	 */
@@ -224,10 +253,22 @@ class Bio {
 	 * Prints an array along with its indices
 	 * @param	array	The array to print
 	 * @param	offset	Integer offset for indices, e.g. to start with index 1
+	 * @param	field	If specified, the field is printed instead of the toString output 
 	 */
 	public static function PrintArray(array:Array<Dynamic>, offset:Int = 1, ?field:String) {
 		for (i in 0...array.length) {
 			Sys.println('\t[${i + offset}] ' + (field == null? array[i]: Reflect.field(array[i], field)));
+		}
+	}
+	
+	/**
+	 * Prints a list
+	 * @param	list	The list to print
+	 * @param	field	If specified, the field is printed instead of the toString output 
+	 */
+	public static function PrintList(list:List<Dynamic>, ?field:String) {
+		for (el in list) {
+			Sys.println('\t' + (field == null? el: Reflect.field(el, field)));
 		}
 	}
 	
