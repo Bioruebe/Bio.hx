@@ -15,7 +15,9 @@
 **/ 
 
 package ;
+import haxe.crypto.BaseCode;
 import haxe.ds.StringMap;
+import haxe.io.Bytes;
 import haxe.macro.Context;
 import sys.FileSystem;
 
@@ -26,6 +28,8 @@ import sys.FileSystem;
 class Bio {
 	public static inline var seperator = "\r\n---------------------------------------------------------------------\r\n";
 	private static var promptSettings = new StringMap<PromptSetting>();
+	private static var baseCode = new BaseCode(Bytes.ofString("0123456789abcdef"));
+	public static var pathSeperator = Sys.systemName() == "Windows"? "\\": "/";
 	
 	/**
 	 * Returns first string found between given start and end string.
@@ -54,7 +58,7 @@ class Bio {
 	 * @param	end		the end string to replace between
 	 * @param	replace the replacement string
 	 */
-	public static function StringReplaceBetween(string:String, start:String, end:String, replace:String) {
+	public static function StringReplaceBetween(string:String, start:String, end:String, replace:String):String {
 		var startPos = start == ""? 0: string.indexOf(start);
 		var endPos = string.indexOf(end, startPos + 1);
 		
@@ -110,7 +114,7 @@ class Bio {
 	 * @param	insertString	The string to insert
 	 * @param	pos				The position to insert string at
 	 */
-	public static function StringInsert(string:String, insertString:String, pos:Int) {
+	public static function StringInsert(string:String, insertString:String, pos:Int):String {
 		if (pos < 0) {
 			throw "Invalid string insert position";
 		}
@@ -124,7 +128,7 @@ class Bio {
 	 * @param	template		The template string
 	 * @param	placeholders	A map containing the placeholder names and values
 	 */
-	public static function tpl(template:String, placeholders:Map<String, Dynamic>) {
+	public static function tpl(template:String, placeholders:Map<String, Dynamic>):String {
 		for (key in placeholders.keys()) {
 			template = StringTools.replace(template, key, placeholders.get(key));
 		}
@@ -138,7 +142,7 @@ class Bio {
 	 * @param	m2			The second map
 	 * @param	overwrite	If true, keys from m2 replace keys from m1
 	 */
-	public static function CombineMaps<T>(m1:StringMap<T>, m2:StringMap<T>, overwrite:Bool = false) {
+	public static function CombineMaps<T>(m1:StringMap<T>, m2:StringMap<T>, overwrite:Bool = false):StringMap<T> {
 		if (m2 == null) return m1;
 		for (item in m2.keys()) {
 			if (!m1.exists(item) || overwrite) m1.set(item, m2.get(item));
@@ -146,14 +150,11 @@ class Bio {
 		return m1;
 	}
 
-	/** Return seperate parts of a file path
+	/** Return an object with a path split into its parts, e.g. file name, extension and directory
 	 * @param	path		The full file path
 	 * @return				A FileParts object
 	 */
-	public static function FileGetParts(path:String):FileParts{
-		// TODO
-		if (!StringInStr(path, ".")) return {name: "", fullName: "", extension: "", directory: PathAppendSeperator(path)};
-
+	public static function FileGetParts(path:String):FileParts {
 		var pos = path.lastIndexOf("\\");
 		if (pos < 0) pos = path.lastIndexOf("/");
 		if (pos < 0) {
@@ -164,6 +165,7 @@ class Bio {
 		var directory = path.substring(0, pos + 1);
 		var fullname = path.substring(pos + 1);
 		pos = fullname.lastIndexOf(".");
+		if (pos < 0) return {name: fullname, fullName: fullname, extension: "", directory: directory};
 		
 		var extension = fullname.substring(pos + 1);
 		return {name: fullname.substring(0, pos), fullName: fullname, extension: extension, directory: directory};
@@ -173,7 +175,7 @@ class Bio {
 	 * Return true if the path ends with '/' or '\'
 	 * @param	path
 	 */
-	public static inline function PathEndsWithSeperator(path:String){
+	public static inline function PathEndsWithSeperator(path:String):Bool {
 		return StringTools.endsWith(path, "/") || StringTools.endsWith(path, "\\");
 	}
 	
@@ -182,24 +184,54 @@ class Bio {
 	 * @param	path
 	 */
 	public static inline function PathAppendSeperator(path:String):String {
-		return PathEndsWithSeperator(path)? path: path + "/";
+		if (StringTools.endsWith(path, "\"")) path = path.substr(0, path.length - 1);
+		return PathEndsWithSeperator(path)? path: path + pathSeperator;
 	}
 	
 	/**
-	 * Make sure directory structure exists
+	 * Make sure directory structure exists. Returns the path for convenience.
 	 * @param	path
 	 */
-	public static function AssurePathExists(path:String) {
+	public static function AssurePathExists(path:String):String {
 		var parts = path.split("/");
 		if (parts.length < 2) parts = path.split("\\");
 		var curr = "";
 		for (p in parts) {
 			curr += p + "/";
 			if (p.indexOf(":") > -1 || p.indexOf(".") > -1) continue;
-			if (!FileSystem.exists(curr)) FileSystem.createDirectory(curr);
+			try {
+				if (!FileSystem.exists(curr)) FileSystem.createDirectory(curr);
+			}
+			catch (error:Dynamic) {
+				Error("Failed to create Directory " + curr, 1);
+			}
 		}
 		
 		return path;
+	}
+	
+	/**
+	 * Convert a hex string to a bytes object
+	 * @param	hex				String representation of hexadecimal values
+	 * @param	useLowerCase	Convert hex string to lower case
+	 */
+	public static inline function HexToBytes(hex:String, useLowerCase:Bool = true):Bytes {
+		return baseCode.decodeBytes(Bytes.ofString(useLowerCase? hex.toLowerCase(): hex));
+	}
+	
+	/**
+	 * XOR two bytes objects. The data object is modified in place. The key is repeated if it is shorter than the data.
+	 * @param	data
+	 * @param	key
+	 */
+	public static function Xor(data:Bytes, key:Bytes) {
+		if (key == null || key.length <= 0) return;
+		var keyLength = key.length;
+		for (i in 0...data.length) {
+			var k = key.get(i % keyLength);
+			var d = data.get(i);
+			data.set(i, d ^ k);
+		}
 	}
 	
 	/**
@@ -234,7 +266,7 @@ class Bio {
 	 * Convenience function, shortcut to calling Cout with LogSeverity.WARNING
 	 * @param	msg			The message to print	
 	 */
-	public static inline function Warning(msg:Dynamic){
+	public static inline function Warning(msg:Dynamic) {
 		Cout(msg, LogSeverity.WARNING);
 	}
 	
@@ -242,7 +274,7 @@ class Bio {
 	 * Convenience function, shortcut to calling Cout with LogSeverity.ERROR
 	 * @param	msg			The message to print	
 	 */
-	public static function Error(msg:Dynamic, exitCode:Int = -1){
+	public static function Error(msg:Dynamic, exitCode:Int = -1) {
 		Cout(msg, LogSeverity.ERROR);
 #if sys		
 		if (exitCode > -1) Sys.exit(exitCode);
@@ -280,7 +312,7 @@ class Bio {
 	 * @param	chars	Characters used for positive and negative result, in format y|n
 	 * @return			User choice: true or false
 	 */
-	public static function Prompt(msg:String, id:String = "", choices:String = "[Y]es | [N]o | [A]lways | n[E]ver", chars:String = "y|n|a|e") {
+	public static function Prompt(msg:String, id:String = "", choices:String = "[Y]es | [N]o | [A]lways | n[E]ver", chars:String = "y|n|a|e"):Bool {
 		// Check setting from previous function calls
 		var setting = promptSettings.get(id);
 		if (setting != null) {
@@ -315,7 +347,7 @@ class Bio {
 	 * @param	min	Minimum value to accept
 	 * @param	max	Maximum value to accept
 	 */
-	public static function IntPrompt(?msg:String, min:Null<Int>, max:Null<Int>) {
+	public static function IntPrompt(?msg:String, min:Null<Int>, max:Null<Int>):Null<Int> {
 		if (msg != null) Sys.println(msg);
 		var input = null;
 		Sys.println("");
@@ -346,7 +378,7 @@ class Bio {
 	 */
 	public static function Header(name:String, version:String, description:String, ?usage:String) {
 		Seperator();
-		var header = name + " by Bioruebe (http://bioruebe.com), " + getBuildYear() + ", Version " + version + ", Released under a BSD 3-Clause style license\n\n" + description + (usage == null? "": "\n\nUsage: " + getProgramName() + " " + usage);
+		var header = name + " by Bioruebe (https://bioruebe.com), " + getBuildYear() + ", Version " + version + ", Released under a BSD 3-Clause style license\n\n" + description + (usage == null? "": "\n\nUsage: " + getProgramName() + " " + usage);
 #if sys
 		Sys.println(header);
 #else
@@ -410,11 +442,11 @@ typedef FileParts = {
 	 */
 	var fullName:String;
 	/**
-	 * The file's extension
+	 * The file's extension without leading dot
 	 */
 	var extension:String;
 	/**
-	 * The file extension
+	 * The file directory
 	 */
 	var directory:String;
 }
