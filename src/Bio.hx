@@ -349,7 +349,7 @@ class Bio {
 	 */
 	public static function IntPrompt(?msg:String, min:Null<Int>, max:Null<Int>):Null<Int> {
 		if (msg != null) Sys.println(msg);
-		var input = null;
+		var input:Null<Int> = null;
 		Sys.println("");
 		
 		var multiChar = max > 9 || min < -9;
