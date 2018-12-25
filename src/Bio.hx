@@ -27,9 +27,15 @@ import sys.FileSystem;
  */
 class Bio {
 	public static inline var seperator = "\r\n---------------------------------------------------------------------\r\n";
-	private static var promptSettings = new StringMap<PromptSetting>();
+	private static var promptSettings = new StringMap<Dynamic>();
 	private static var baseCode = new BaseCode(Bytes.ofString("0123456789abcdef"));
 	public static var pathSeperator = Sys.systemName() == "Windows"? "\\": "/";
+	public static var defaultPromptOptions = [ 
+		new PromptOption("Yes", "y", true),
+		new PromptOption("No", "n", false),
+		new PromptOption("Always", "a", true, true),
+		new PromptOption("Never", "e", false, true)
+	];
 	
 	/**
 	 * Returns first string found between given start and end string.
@@ -116,11 +122,17 @@ class Bio {
 	 */
 	public static function StringInsert(string:String, insertString:String, pos:Int):String {
 		if (pos < 0) {
-			throw "Invalid string insert position";
+			throw "Invalid string insert position: " + pos;
 		}
 		else {
 			return string.substr(0, pos) + insertString + string.substr(pos);
 		}
+	}
+	
+	public static function StringReplaceFirst(string:String, searchString:String, replaceString:String) {
+		var pos = string.indexOf(searchString);
+		if (pos < 0) return string;
+		return string.substring(0, pos) + replaceString + string.substring(pos + searchString.length);
 	}
 	
 	/**
@@ -308,36 +320,36 @@ class Bio {
 	 * Display a prompt and wait for user input
 	 * @param	msg		The question to display
 	 * @param	id		An unique id used for this prompt. This is used to save always/never preferences.
-	 * @param	choices	Choices text to be displayed
-	 * @param	chars	Characters used for positive and negative result, in format y|n
-	 * @return			User choice: true or false
+	 * @param	choices	Possible choices to display
+	 * @return			User choice as defined in PromptOptions
 	 */
-	public static function Prompt(msg:String, id:String = "", choices:String = "[Y]es | [N]o | [A]lways | n[E]ver", chars:String = "y|n|a|e"):Bool {
-		// Check setting from previous function calls
-		var setting = promptSettings.get(id);
-		if (setting != null) {
-			if (setting == PromptSetting.ALWAYS) return true;
-			if (setting == PromptSetting.NEVER) return false;
-		}
+	public static function Prompt(msg:String, id:String = "", options:Array<PromptOption> = null):Dynamic {
+		if (options == null || options.length < 1) options = defaultPromptOptions;
 		
-		var aChars = chars.split("|");
-		var input:Int;
+		// Check setting from previous function calls
+		var returnValue = promptSettings.get(id);
+		if (returnValue != null) return returnValue;
+		
+		var input:String;
+		var choices = "";
+		for (opt in options) {
+			var charPos = opt.text.toLowerCase().indexOf(opt.char);
+			var text = opt.text;
+			if (charPos > -1) text = StringInsert(StringInsert(text, "]", charPos + 1), "[", charPos);
+			choices += " | " + text;
+		}
+		choices = choices.substr(3);
 		
 		while (true) {
 			Sys.println("\n" + msg + ' $choices');
-			input = String.fromCharCode(Sys.getChar(true)).toLowerCase().charCodeAt(0);
+			input = String.fromCharCode(Sys.getChar(true)).toLowerCase();
 			Sys.println("");
 			
-			if (input == aChars[0].charCodeAt(0)) return true;
-			if (input == aChars[1].charCodeAt(0)) return false;
-			if (input == aChars[2].charCodeAt(0)) {
-				promptSettings.set(id, PromptSetting.ALWAYS);
-				return true;
-			}
-			if (input == aChars[3].charCodeAt(0)) {
-				promptSettings.set(id, PromptSetting.NEVER);
-				return false;
-			}
+			var selectedOption = Lambda.find(options, function(o) return o.char == input);
+			if (selectedOption == null) continue;
+			
+			if (selectedOption.setStandard) promptSettings.set(id, selectedOption.returnValue);
+			return selectedOption.returnValue;
 		}
 	}
 	
@@ -451,6 +463,34 @@ typedef FileParts = {
 	var directory:String;
 }
 
+class PromptOption {
+	/**
+	 * The text to display
+	 */
+	public var text:String;
+	/**
+	 * A unique value to return
+	 */
+	public var returnValue:Dynamic;
+	/**
+	 * The character the user has to enter to select an option
+	 * The respective character is automatically marked in the text
+	 */
+	public var char:String;
+	/**
+	 * If setStandard is true, the values will be returned without displaying a prompt for all future calls with the same id
+	 * This is used for options like 'Always', 'Never' or 'Always rename'
+	 */
+	public var setStandard:Bool;
+	
+	public function new(text:String, char:String, returnValue:Dynamic, setStandard:Bool = false) {
+		this.text = text;
+		this.char = char;
+		this.returnValue = returnValue;
+		this.setStandard = setStandard;
+	}
+}
+
 enum LogSeverity {
 	DEBUG;
 	INFO;
@@ -459,10 +499,4 @@ enum LogSeverity {
 	CRITICAL;
 	MESSAGE;
 	UNITTEST;
-}
-
-enum PromptSetting {
-	ALWAYS;
-	NEVER;
-	NONE;
 }
