@@ -275,6 +275,14 @@ class Bio {
 	}
 	
 	/**
+	 * Convenience function, shortcut to calling Cout with LogSeverity.DEBUG
+	 * @param	msg			The message to print	
+	 */
+	public static inline function Debug(msg:Dynamic) {
+		Cout(msg, LogSeverity.DEBUG);
+	}
+	
+	/**
 	 * Convenience function, shortcut to calling Cout with LogSeverity.WARNING
 	 * @param	msg			The message to print	
 	 */
@@ -374,6 +382,19 @@ class Bio {
 	}
 	
 	/**
+	 * Prompt for a string and return user input
+	 * @param	msg The message to print before waiting for input
+	 */
+	public static function StringPrompt(?msg:String) {
+		if (msg != null) Sys.println(msg);
+		
+		var input = Sys.stdin().readLine();
+		Sys.println("");
+		
+		return input;
+	}
+	
+	/**
 	 * Wait for any key press
 	 * @param	msg		The message to display before waiting
 	 */
@@ -388,9 +409,9 @@ class Bio {
 	 * @param	version		Version of the program
 	 * @param	description Short description of the main functionality
 	 */
-	public static function Header(name:String, version:String, description:String, ?usage:String) {
+	public static function Header(name:String, version:String, year:String = "", description:String = "", ?usage:String) {
 		Seperator();
-		var header = name + " by Bioruebe (https://bioruebe.com), " + getBuildYear() + ", Version " + version + ", Released under a BSD 3-Clause style license\n\n" + description + (usage == null? "": "\n\nUsage: " + getProgramName() + " " + usage);
+		var header = name + " by Bioruebe (https://bioruebe.com), " + (year == ""? Std.string(getBuildYear()): year) + ", Version " + version + ", Released under a BSD 3-Clause style license\n\n" + description + (usage == null? "": "\n\nUsage: " + getProgramName() + " " + usage);
 #if sys
 		Sys.println(header);
 #else
