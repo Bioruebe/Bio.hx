@@ -39,9 +39,9 @@ class Bio {
 	
 	/**
 	 * Returns first string found between given start and end string.
-	 * @param	string	the search string
-	 * @param	start	the start string to search between
-	 * @param	end		the end string to search between
+	 * @param	string	The string to search for
+	 * @param	start	The start string to search between
+	 * @param	end		The end string to search between
 	 * @return	first string found between start and end
 	 */
 	public static function StringBetween(string:String, start:String, ?end:String):String {
@@ -59,10 +59,10 @@ class Bio {
 	
 	/**
 	 * Replace between two strings.
-	 * @param	string	the search string
-	 * @param	start	the start string to replace between
-	 * @param	end		the end string to replace between
-	 * @param	replace the replacement string
+	 * @param	string	The string to search for
+	 * @param	start	The start string to replace between
+	 * @param	end		The end string to replace between
+	 * @param	replace The replacement string
 	 */
 	public static function StringReplaceBetween(string:String, start:String, end:String, replace:String):String {
 		var startPos = start == ""? 0: string.indexOf(start);
@@ -129,6 +129,12 @@ class Bio {
 		}
 	}
 	
+	/**
+	 * Replace the first occurence of searchString
+	 * @param	string			The original string
+	 * @param	searchString	The string to search for
+	 * @param	replaceString	The replacement string
+	 */
 	public static function StringReplaceFirst(string:String, searchString:String, replaceString:String) {
 		var pos = string.indexOf(searchString);
 		if (pos < 0) return string;
@@ -407,11 +413,15 @@ class Bio {
 	 * Print standard command line tool header
 	 * @param	name		Name of the program
 	 * @param	version		Version of the program
+	 * @param	year		The release year. The current year is automatically appended on build.
 	 * @param	description Short description of the main functionality
+	 * @param	usage		Command line usage help text. The programm name is automatically added before.
 	 */
 	public static function Header(name:String, version:String, year:String = "", description:String = "", ?usage:String) {
 		Seperator();
-		var header = name + " by Bioruebe (https://bioruebe.com), " + (year == ""? Std.string(getBuildYear()): year) + ", Version " + version + ", Released under a BSD 3-Clause style license\n\n" + description + (usage == null? "": "\n\nUsage: " + getProgramName() + " " + usage);
+		var buildYear = Std.string(getBuildYear());
+		if (year != "" && year != buildYear) buildYear = year + "-" + buildYear;
+		var header = name + " by Bioruebe (https://bioruebe.com), " + buildYear + ", Version " + version + ", Released under a BSD 3-Clause style license\n\n" + description + (usage == null? "": "\n\nUsage: " + getProgramName() + " " + usage);
 #if sys
 		Sys.println(header);
 #else
